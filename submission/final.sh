@@ -178,8 +178,8 @@ CHANGE_AMOUNT=$((UTXO_VALUE - PAYMENT_AMOUNT - FEE_SATS))
 check_cmd "Change calculation" "CHANGE_AMOUNT" "$CHANGE_AMOUNT"
 
 # Convert amounts to BTC for createrawtransaction
-PAYMENT_BTC=$(echo "scale=8; $PAYMENT_AMOUNT / 100000000" | bc)
-CHANGE_BTC=$(echo "scale=8; $CHANGE_AMOUNT / 100000000" | bc)
+PAYMENT_BTC=$(printf '%.8f' "$(echo "scale=8; $PAYMENT_AMOUNT / 100000000" | bc)")
+CHANGE_BTC=$(printf '%.8f' "$(echo "scale=8; $CHANGE_AMOUNT / 100000000" | bc)")
 
 # Create the outputs JSON structure
 TX_OUTPUTS='{"'$PAYMENT_ADDRESS'":'$PAYMENT_BTC',"'$CHANGE_ADDRESS'":'$CHANGE_BTC'}'
@@ -210,19 +210,19 @@ check_cmd "Transaction decoding" "DECODED_TX" "$DECODED_TX"
 VERIFY_RBF=$(echo "$DECODED_TX" | jq -r 'if .vin[0].sequence < 4294967294 then "true" else "false" end')
 check_cmd "RBF verification" "VERIFY_RBF" "$VERIFY_RBF"
 
-VERIFY_PAYMENT=$(echo "$DECODED_TX" | jq -r '.vout[] | select(.scriptPubKey.address == "'$PAYMENT_ADDRESS'") | .value')
+VERIFY_PAYMENT=$(echo "$DECODED_TX" | jq -r '.vout[] | select(.scriptPubKey.address == "'$PAYMENT_ADDRESS'") | (.value * 100000000 | floor)')
 check_cmd "Payment verification" "VERIFY_PAYMENT" "$VERIFY_PAYMENT"
 
-VERIFY_CHANGE=$(echo "$DECODED_TX" | jq -r '.vout[] | select(.scriptPubKey.address == "'$CHANGE_ADDRESS'") | .value')
+VERIFY_CHANGE=$(echo "$DECODED_TX" | jq -r '.vout[] | select(.scriptPubKey.address == "'$CHANGE_ADDRESS'") | (.value * 100000000 | floor)')
 check_cmd "Change verification" "VERIFY_CHANGE" "$VERIFY_CHANGE"
 
 echo "Verification Results:"
 echo "- RBF enabled: $VERIFY_RBF"
-echo "- Payment to $PAYMENT_ADDRESS with amount $VERIFY_PAYMENT BTC"
-echo "- Change to $CHANGE_ADDRESS with amount $VERIFY_CHANGE BTC"
+echo "- Payment to $PAYMENT_ADDRESS with amount $PAYMENT_BTC BTC"
+echo "- Change to $CHANGE_ADDRESS with amount $CHANGE_BTC BTC"
 
 # Final verification
-if [ "$VERIFY_RBF" == "true" ] && [ "$VERIFY_PAYMENT" == "$PAYMENT_BTC" ] && [ "$VERIFY_CHANGE" == "$CHANGE_BTC" ]; then
+if [ "$VERIFY_RBF" == "true" ] && [ "$VERIFY_PAYMENT" -eq "$PAYMENT_AMOUNT" ] && [ "$VERIFY_CHANGE" -eq "$CHANGE_AMOUNT" ]; then
   echo "✅ Transaction looks good! Ready for signing."
 else
   echo "❌ Transaction verification failed! Double-check your transaction."
@@ -305,7 +305,7 @@ CHILD_SEND_AMOUNT=$((CHANGE_AMOUNT - CHILD_FEE_SATS))
 check_cmd "Child amount calculation" "CHILD_SEND_AMOUNT" "$CHILD_SEND_AMOUNT"
 
 # Convert to BTC
-CHILD_SEND_BTC=$(echo "scale=8; $CHILD_SEND_AMOUNT / 100000000" | bc)
+CHILD_SEND_BTC=$(printf '%.8f' "$(echo "scale=8; $CHILD_SEND_AMOUNT / 100000000" | bc)")
 
 # Create the outputs JSON structure
 CHILD_OUTPUTS='{"'$CHILD_RECIPIENT'":'$CHILD_SEND_BTC'}'
@@ -355,7 +355,7 @@ TIMELOCK_AMOUNT=$((SECONDARY_OUTPUT_VALUE - TIMELOCK_FEE))
 check_cmd "Timelock amount calculation" "TIMELOCK_AMOUNT" "$TIMELOCK_AMOUNT"
 
 # Convert to BTC
-TIMELOCK_BTC=$(echo "scale=8; $TIMELOCK_AMOUNT / 100000000" | bc)
+TIMELOCK_BTC=$(printf '%.8f' "$(echo "scale=8; $TIMELOCK_AMOUNT / 100000000" | bc)")
 
 # Create the outputs JSON structure
 TIMELOCK_OUTPUTS='{"'$TIMELOCK_ADDRESS'":'$TIMELOCK_BTC'}'

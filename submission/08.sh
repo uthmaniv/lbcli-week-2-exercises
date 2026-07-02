@@ -5,7 +5,7 @@ txid=$(bitcoin-cli -regtest decoderawtransaction "$raw_tx" | jq -r '.txid')
 total_sats=$(bitcoin-cli -regtest decoderawtransaction "$raw_tx" | jq '[.vout[].value] | add | . * 100000000 | floor')
 fee=20000
 send=$((total_sats - fee))
-send_btc=$(echo "scale=8; $send / 100000000" | bc)
+send_btc=$(printf '%.8f' "$(echo "scale=8; $send / 100000000" | bc)")
 bitcoin-cli -regtest createrawtransaction \
   '[{"txid":"'"$txid"'","vout":0},{"txid":"'"$txid"'","vout":1}]' \
   '{"2MvLcssW49n9atmksjwg2ZCMsEMsoj3pzUP":'"$send_btc"'}'
